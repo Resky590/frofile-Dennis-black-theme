@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en" class="lenis lenis-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FAU-RES EDGE | Visual Architect</title>
+    
+    <!-- Fonts -->
+    <link href="https://api.fontshare.com/v2/css?f[]=clash-display@700,600&f[]=satoshi@400,500&display=swap" rel="stylesheet">
+    
+    <!-- CDNs -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://unpkg.com/split-type"></script>
+    <script src="https://unpkg.com/lenis@1.1.13/dist/lenis.min.js"></script>
+
+    <style>
+        :root {
+            --bg-deep: #050505;
+            --accent: #ffffff;
+            --glass: rgba(255, 255, 255, 0.03);
+            --border: rgba(255, 255, 255, 0.1);
+            --primary-glow: rgba(255, 255, 255, 0.15);
+        }
+
+        /* Anti-Blink Guard */
+        html, body { background-color: var(--bg-deep); }
+        main { opacity: 0; visibility: hidden; } 
+
+        * { margin: 0; padding: 0; box-sizing: border-box; cursor: none; }
+
+        body {
+            color: var(--accent);
+            font-family: 'Satoshi', sans-serif;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        h1, h2, h3 { font-family: 'Clash Display', sans-serif; text-transform: uppercase; }
+
+        /* Performance Optimization */
+        .hero-title, .work-img, .menu-link, .reveal-text, .profile-img {
+            will-change: transform, opacity;
+        }
+
+        #scroll-progress {
+            position: fixed; top: 0; left: 0; width: 0%; height: 2px;
+            background: #fff; z-index: 10006;
+        }
+
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: var(--bg-deep); }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+
+        /* Noise & Texture */
+        .noise-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 9998; opacity: 0.06;
+            background-image: url("https://grainy-gradients.vercel.app/noise.svg");
+        }
+
+        #cursor {
+            position: fixed; width: 12px; height: 12px; background: #fff;
+            border-radius: 50%; pointer-events: none; z-index: 10005;
+            mix-blend-mode: difference;
+            transition: transform 0.2s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .glass {
+            background: var(--glass);
+            backdrop-filter: blur(25px);
+            border: 1px solid var(--border);
+            border-radius: 32px;
+        }
+
+        section { min-height: 100vh; position: relative; width: 100%; display: flex; flex-direction: column; justify-content: center; }
+
+        /* Loader */
+        #loader {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: #000; z-index: 10007;
+            display: flex; justify-content: center; align-items: center;
+        }
+
+        #hero-canvas { position: absolute; top: 0; left: 0; z-index: -1; pointer-events: none; }
+        
+        .hero-title { 
+            font-size: clamp(3.5rem, 15vw, 13rem); 
+            line-height: 0.75; 
+            letter-spacing: -0.07em; 
+            position: relative; 
+            z-index: 5; 
+            font-weight: 700;
+        }
+
+        /* Profile Image Upgrade - Editorial Scan */
+        .profile-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            aspect-ratio: 3.5/4.5;
+            margin-left: auto;
+            z-index: 2;
+            perspective: 2000px;
+        }
+        .profile-img-container {
+            width: 100%; height: 100%;
+            overflow: hidden; border-radius: 40px;
+            position: relative;
+            box-shadow: 0 60px 120px -30px rgba(0,0,0,0.8);
+            background: #111;
+        }
+        .profile-img {
+            width: 100%; height: 100%; object-fit: cover;
+            filter: grayscale(100%) brightness(0.7) contrast(1.3);
+            transition: all 1.5s cubic-bezier(0.19, 1, 0.22, 1);
+            scale: 1.2;
+        }
+        
+        /* Light Sweep Effect */
+        .profile-img-container::after {
+            content: '';
+            position: absolute; top: 0; left: -100%; width: 50%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transform: skewX(-25deg);
+            transition: 0.8s;
+        }
+        .profile-wrapper:hover .profile-img-container::after { left: 150%; }
+
+        .profile-wrapper:hover .profile-img { 
+            filter: grayscale(0%) brightness(1) contrast(1); 
+            scale: 1.05; 
+        }
+        
+        .profile-decor {
+            position: absolute; top: -20px; right: -20px; width: 100%; height: 100%;
+            border: 2px solid rgba(255,255,255,0.05); border-radius: 40px; z-index: -1;
+            transition: all 0.8s cubic-bezier(0.19, 1, 0.22, 1);
+        }
+        .profile-wrapper:hover .profile-decor { transform: translate(-25px, 25px); border-color: rgba(255,255,255,0.2); }
+
+        .horizontal-container { width: 400vw; display: flex; height: 100vh; }
+        .work-item { width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; padding: 5vw; }
+        .work-img-wrapper { 
+            width: 70%; height: 80%; overflow: hidden; border-radius: 24px; position: relative;
+            background: #111;
+        }
+        .work-img { width: 100%; height: 100%; object-fit: cover; transform: scale(1.1); transition: transform 2s cubic-bezier(0.19, 1, 0.22, 1); }
+
+        .floating-nav {
+            position: fixed; bottom: 3rem; left: 50%; transform: translateX(-50%);
+            z-index: 10001; padding: 10px; display: flex; align-items: center; 
+            opacity: 0; visibility: hidden;
+            border-radius: 100px;
+        }
+        
+        .menu-btn {
+            padding: 16px 48px; border-radius: 100px; font-size: 0.8rem;
+            letter-spacing: 0.3em; font-weight: 700;
+            transition: all 0.6s cubic-bezier(0.19, 1, 0.22, 1);
+            background: white; color: black; border: none; cursor: pointer;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .menu-btn:hover { letter-spacing: 0.6em; background: #fff; transform: scale(1.05) translateY(-5px); }
+
+        #menu-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100vh;
+            background: #000; z-index: 10000; opacity: 0;
+            visibility: hidden; display: flex; align-items: center; justify-content: center;
+        }
+
+        .menu-content { display: grid; grid-template-columns: 1.3fr 0.7fr; width: 100%; height: 100%; padding: 5vw 10vw; }
+        .menu-link {
+            font-family: 'Clash Display'; font-size: clamp(3.5rem, 9vw, 9rem);
+            font-weight: 700; line-height: 0.8; color: white; text-decoration: none;
+            position: relative; margin-bottom: 30px; transition: all 0.6s ease;
+        }
+        .menu-link span { display: inline-block; transform: translateY(115%); transition: transform 1s cubic-bezier(0.19, 1, 0.22, 1); }
+        .menu-link:hover { padding-left: 40px; color: rgba(255,255,255,0.4); }
+
+        .menu-preview-container {
+            position: relative; display: flex; align-items: center; justify-content: center;
+            overflow: hidden; border-radius: 40px; background: #080808; aspect-ratio: 0.85;
+            margin: auto; width: 100%; max-width: 450px;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.5);
+        }
+        .menu-preview-img {
+            position: absolute; width: 100%; height: 100%; object-fit: cover; opacity: 0;
+            transform: scale(1.4) rotate(10deg);
+            transition: opacity 1s ease, transform 1.2s cubic-bezier(0.19, 1, 0.22, 1);
+        }
+        .menu-preview-img.active { opacity: 0.7; transform: scale(1) rotate(0deg); }
+
+        /* Liquid Text Anim */
+        .liquid-text {
+            background: linear-gradient(90deg, #fff, #777, #fff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: flow 10s linear infinite;
+        }
+        @keyframes flow { to { background-position: 200% center; } }
+
+        /* Masking Tipografi */
+        .mask-t { overflow: hidden; }
+        .mask-t span { display: block; }
+    </style>
+</head>
+<body>
+
+    <div id="scroll-progress"></div>
+    
+    <div id="loader">
+        <div class="overflow-hidden">
+            <h2 id="loader-text" class="text-6xl font-bold italic tracking-tighter">FAU-RES EDGE</h2>
+        </div>
+    </div>
+
+    <div id="cursor"></div>
+    <div class="noise-overlay"></div>
+
+    <canvas id="hero-canvas"></canvas>
+
+    <div id="menu-overlay">
+        <div class="menu-content">
+            <div class="menu-nav-links">
+                <a href="#about" class="menu-link" data-preview="https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&q=80&w=1000"><span>ABOUT</span></a>
+                <a href="#services" class="menu-link" data-preview="https://images.unsplash.com/photo-1633167606207-d840b5070fc2?auto=format&fit=crop&q=80&w=1000"><span>SERVICES</span></a>
+                <a href="#works-pin" class="menu-link" data-preview="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=1000"><span>WORKS</span></a>
+                <a href="#contact" class="menu-link" data-preview="https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&q=80&w=1000"><span>CONTACT</span></a>
+                
+                <div class="mt-20 flex gap-12 opacity-30 text-[11px] tracking-[0.5em] font-bold">
+                    <span>INSTAGRAM</span>
+                    <span>DRIBBBLE</span>
+                    <span>BEHANCE</span>
+                </div>
+            </div>
+            <div class="menu-preview-container hidden lg:flex">
+                <img src="" class="menu-preview-img" id="current-preview" alt="Preview">
+            </div>
+        </div>
+    </div>
+
+    <div class="floating-nav glass">
+        <button class="menu-btn" id="menu-toggle">MENU</button>
+    </div>
+
+    <main id="main-content">
+        <!-- UPGRADED HERO SECTION -->
+        <section id="hero" class="px-8 md:px-24 pt-24 overflow-hidden">
+            <div class="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-16 items-center">
+                <div class="lg:col-span-7">
+                    <div class="mask-t"><span class="block text-[10px] font-bold opacity-40 mb-8 tracking-[0.5em] translate-y-full hero-sub uppercase">Lead Visual Architect ©2026 / Crafting the Void</span></div>
+                    <h1 class="hero-title">FAU-RES<br><span class="pl-[6vw] italic liquid-text">EDGE</span></h1>
+                    
+                    <div class="mt-20 flex flex-col md:flex-row justify-between items-start md:items-end hero-meta opacity-0">
+                        <div class="max-w-md space-y-8">
+                            <p class="text-xl md:text-2xl leading-tight opacity-70 font-medium tracking-tight">Membangun narasi digital melalui arsitektur visual yang melampaui logika konvensional.</p>
+                            <div class="flex gap-6 items-center">
+                                <div class="w-16 h-[1px] bg-white/40"></div>
+                                <span class="text-[11px] tracking-[0.3em] opacity-40 font-bold">SCROLL TO EXPERIENCE</span>
+                            </div>
+                        </div>
+                        <div class="text-right mt-12 md:mt-0 flex flex-col items-end gap-3">
+                            <p class="text-[11px] uppercase tracking-[0.4em] opacity-40">Tokyo / London / Global</p>
+                            <div class="glass px-6 py-3 border-white/5 bg-white/5">
+                                <span class="text-[11px] font-bold tracking-tight">COLLECTION SERIES V2.1</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="lg:col-span-5 mt-16 lg:mt-0">
+                    <div class="profile-wrapper magnetic-target">
+                        <div class="profile-decor"></div>
+                        <div class="profile-img-container">
+                            <img src="https://blog.pengajartekno.co.id/wp-content/uploads/2023/04/Gambar-Anime-Hitam-Putih-17.jpg" class="profile-img" alt="FAU-RES EDGE Profile">
+                        </div>
+                        <div class="absolute -bottom-10 -right-6 glass px-10 py-6 z-10 profile-label opacity-0 border-white/10 shadow-2xl">
+                            <div class="flex flex-col">
+                                <span class="text-[10px] tracking-[0.4em] font-bold mb-2 opacity-40">STATUS</span>
+                                <span class="text-xs font-bold tracking-widest">OPEN FOR COLLABORATION 2026</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Manifesto -->
+        <section id="about" class="px-8 md:px-24 py-56">
+            <div class="max-w-7xl">
+                <h2 class="text-[11px] opacity-30 mb-16 tracking-[0.6em] font-bold">THE MANIFESTO</h2>
+                <p class="reveal-text text-5xl md:text-8xl leading-[0.95] font-semibold tracking-tighter">
+                    Ruang digital haruslah bernafas. Setiap piksel adalah pergerakan yang diperhitungkan. Fau-Res Edge adalah garis depan pengalaman web di mana kemewahan bertemu dengan algoritma.
+                </p>
+            </div>
+        </section>
+
+        <!-- Horizontal Pin Section -->
+        <div id="works-pin">
+            <div class="horizontal-container bg-[#080808]">
+                <section class="work-item flex-shrink-0">
+                    <div class="work-img-wrapper group">
+                        <img src="https://aenow.com/application/files/4515/0668/8698/explore-bg.jpg" class="work-img" alt="Proyek 1">
+                        <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-700 flex items-center justify-center">
+                            <span class="text-[11px] tracking-[1.5em] font-bold">EXPLORE WORK</span>
+                        </div>
+                        <div class="absolute bottom-16 left-16 z-20 work-caption">
+                            <h3 class="text-8xl font-bold tracking-tighter">CYBERIA</h3>
+                            <p class="text-xs opacity-40 tracking-[0.4em] mt-4 font-bold">ELITE EXPERIENCE / 2025</p>
+                        </div>
+                    </div>
+                </section>
+                <section class="work-item flex-shrink-0">
+                    <div class="work-img-wrapper group">
+                        <img src="https://architizer-prod.imgix.net/media/1387560360861JNZNBRKbelow.jpg?fit=max&w=760&q=60&auto=format&auto=compress&cs=strip" class="work-img" alt="Proyek 2">
+                        <div class="absolute bottom-16 left-16 z-20 work-caption">
+                            <h3 class="text-8xl font-bold tracking-tighter">LUMINA</h3>
+                            <p class="text-xs opacity-40 tracking-[0.4em] mt-4 font-bold">DIGITAL INSTALLATION / 2026</p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <!-- Vision -->
+        <section class="h-[140vh] flex items-center justify-center bg-black overflow-hidden relative">
+            <img src="https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&q=80&w=2000" 
+                 id="vision-parallax"
+                 class="absolute w-full h-full object-cover opacity-25 grayscale" alt="Visi">
+            <div class="relative z-10 text-center px-8 vision-content">
+                <h2 class="text-[11px] tracking-[1em] mb-12 opacity-30 font-bold uppercase">THE FUTURE</h2>
+                <h3 class="text-6xl md:text-[11rem] max-w-7xl mx-auto leading-[0.8] font-bold italic vision-text tracking-tighter">"Redefining Digital Horizon."</h3>
+            </div>
+        </section>
+
+        <!-- Footer / Contact -->
+        <section id="contact" class="px-8 md:px-24 py-56 bg-white text-black rounded-t-[100px] z-20 shadow-[0_-80px_160px_rgba(0,0,0,0.5)]">
+            <div class="flex flex-col lg:flex-row justify-between items-start gap-32">
+                <div class="flex-1 overflow-hidden">
+                    <h2 class="text-8xl md:text-[16rem] font-bold leading-[0.7] mb-16 contact-title tracking-tighter">LET'S<br>ARCHITECT.</h2>
+                    <p class="text-4xl max-w-xl contact-p font-semibold leading-tight tracking-tight">Siap untuk membangun standar baru di industri digital?</p>
+                </div>
+                <div class="flex flex-col gap-10 text-4xl font-bold social-links">
+                    <a href="#" class="hover:opacity-30 transition-all hover:pl-6">DRIBBBLE ↗</a>
+                    <a href="#" class="hover:opacity-30 transition-all hover:pl-6">INSTAGRAM ↗</a>
+                    <a href="#" class="hover:opacity-30 transition-all hover:pl-6">LINKEDIN ↗</a>
+                    <a href="#" class="hover:opacity-30 transition-all hover:pl-6">TWITTER/X ↗</a>
+                </div>
+            </div>
+            
+            <div class="mt-56 pt-16 border-t border-black/10 flex flex-col md:flex-row justify-between text-[11px] font-bold tracking-[0.3em] opacity-40 footer-bottom">
+                <p>©2026 FAU-RES EDGE. ALL RIGHTS RESERVED.</p>
+                <div class="flex gap-16">
+                    <p>PRIVATE POLICY</p>
+                    <p>TERMS OF SERVICE</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        gsap.config({ force3D: true });
+        gsap.registerPlugin(ScrollTrigger);
+
+        // --- LENIS ---
+        const lenis = new Lenis({
+            duration: 1.5,
+            lerp: 0.07,
+            smoothWheel: true,
+            wheelMultiplier: 1.1
+        });
+
+        function raf(time) {
+            lenis.raf(time);
+            requestAnimationFrame(raf);
+        }
+        requestAnimationFrame(raf);
+        lenis.stop();
+
+        // --- KURSOR ---
+        const cursor = document.getElementById('cursor');
+        window.addEventListener('mousemove', (e) => {
+            gsap.to(cursor, { x: e.clientX, y: e.clientY, duration: 0.4, ease: "power2.out" });
+        });
+
+        document.querySelectorAll('a, button, .glass, .menu-link, .magnetic-target, .work-img-wrapper').forEach(el => {
+            el.addEventListener('mouseenter', () => gsap.to(cursor, { scale: 6, opacity: 0.15 }));
+            el.addEventListener('mouseleave', () => gsap.to(cursor, { scale: 1, opacity: 1 }));
+        });
+
+        // --- MAGNETIC PROFILE REFINED ---
+        const magneticTarget = document.querySelector('.magnetic-target');
+        if(magneticTarget) {
+            magneticTarget.addEventListener('mousemove', (e) => {
+                const rect = magneticTarget.getBoundingClientRect();
+                const x = (e.clientX - rect.left - rect.width / 2) * 0.2;
+                const y = (e.clientY - rect.top - rect.height / 2) * 0.2;
+                gsap.to(magneticTarget, { x, y, rotateX: -y/2, rotateY: x/2, duration: 0.6, ease: "power2.out" });
+            });
+            magneticTarget.addEventListener('mouseleave', () => {
+                gsap.to(magneticTarget, { x: 0, y: 0, rotateX: 0, rotateY: 0, duration: 1.2, ease: "elastic.out(1, 0.3)" });
+            });
+        }
+
+        // --- THREE.JS FLUID MERCURY (UPGRADED) ---
+        const initThree = () => {
+            const canvas = document.getElementById('hero-canvas');
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: true, powerPreference: "high-performance" });
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.setSize(window.innerWidth, window.innerHeight);
+
+            const geometry = new THREE.PlaneGeometry(28, 14, 50, 50);
+            const material = new THREE.ShaderMaterial({
+                uniforms: { 
+                    uTime: { value: 0 },
+                    uMouse: { value: new THREE.Vector2(0,0) }
+                },
+                vertexShader: `
+                    uniform float uTime;
+                    uniform vec2 uMouse;
+                    varying vec2 vUv;
+                    void main() {
+                        vUv = uv;
+                        vec3 pos = position;
+                        float dist = distance(vUv, uMouse);
+                        float force = smoothstep(0.4, 0.0, dist);
+                        float wave = sin(pos.x * 0.7 + uTime * 0.3) * 0.3;
+                        wave += cos(pos.y * 1.0 + uTime * 0.2) * 0.3;
+                        pos.z += wave + (force * 0.8);
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+                    }
+                `,
+                fragmentShader: `
+                    varying vec2 vUv;
+                    uniform float uTime;
+                    void main() {
+                        float shine = sin(vUv.x * 15.0 + uTime * 0.4) * 0.5 + 0.5;
+                        vec3 color = mix(vec3(0.01), vec3(0.08), shine);
+                        gl_FragColor = vec4(color, 0.98);
+                    }
+                `,
+                transparent: true
+            });
+
+            const mesh = new THREE.Mesh(geometry, material);
+            scene.add(mesh);
+            camera.position.z = 7;
+
+            // Mouse interact with Three
+            window.addEventListener('mousemove', (e) => {
+                material.uniforms.uMouse.value.x = e.clientX / window.innerWidth;
+                material.uniforms.uMouse.value.y = 1.0 - (e.clientY / window.innerHeight);
+            });
+
+            let isPaused = false;
+            ScrollTrigger.create({
+                trigger: "#hero", start: "bottom top",
+                onEnter: () => isPaused = true, onEnterBack: () => isPaused = false
+            });
+
+            function animate(time) {
+                if(!isPaused) {
+                    material.uniforms.uTime.value = time * 0.001;
+                    renderer.render(scene, camera);
+                }
+                requestAnimationFrame(animate);
+            }
+            requestAnimationFrame(animate);
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        };
+
+        // --- MENU LOGIC ---
+        let isMenuOpen = false;
+        const menuToggle = document.getElementById('menu-toggle');
+        const menuOverlay = document.getElementById('menu-overlay');
+        const menuLinks = document.querySelectorAll('.menu-link');
+        const previewImg = document.getElementById('current-preview');
+
+        const tlMenu = gsap.timeline({ paused: true });
+        tlMenu.to(menuOverlay, { autoAlpha: 1, duration: 0.7, ease: "power4.inOut" })
+              .to(".menu-link span", { y: 0, stagger: 0.1, duration: 1.4, ease: "expo.out" }, "-=0.4");
+
+        menuToggle.addEventListener('click', () => {
+            if(!isMenuOpen) {
+                tlMenu.play();
+                menuToggle.innerText = "CLOSE";
+                lenis.stop();
+            } else {
+                tlMenu.reverse();
+                menuToggle.innerText = "MENU";
+                lenis.start();
+            }
+            isMenuOpen = !isMenuOpen;
+        });
+
+        menuLinks.forEach(link => {
+            link.addEventListener('mouseenter', () => {
+                const imgUrl = link.getAttribute('data-preview');
+                previewImg.src = imgUrl;
+                previewImg.classList.add('active');
+            });
+            link.addEventListener('mouseleave', () => previewImg.classList.remove('active'));
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const targetId = link.getAttribute('href');
+                tlMenu.reverse().then(() => {
+                    isMenuOpen = false;
+                    menuToggle.innerText = "MENU";
+                    lenis.start();
+                    lenis.scrollTo(targetId, { duration: 2.5 });
+                });
+            });
+        });
+
+        // --- ANIMATIONS & LOAD ---
+        const initAnimations = () => {
+            gsap.set(".profile-img-container", { y: 200, opacity: 0, scale: 0.9 });
+            gsap.set(".hero-title", { y: 200, opacity: 0 });
+            gsap.set(".hero-sub", { y: "110%" });
+            
+            const tl = gsap.timeline();
+
+            tl.to("#loader-text", { y: -120, delay: 1, duration: 1, ease: "power4.inOut" })
+              .to("#loader", { yPercent: -100, duration: 1.4, ease: "expo.inOut" }, "-=0.2")
+              .set("#main-content", { autoAlpha: 1 })
+              .to(".hero-sub", { y: 0, duration: 1.5, ease: "expo.out" }, "-=0.6")
+              .to(".hero-title", { y: 0, opacity: 1, duration: 2.2, ease: "expo.out", stagger: 0.2 }, "-=1.2")
+              .to(".profile-img-container", { y: 0, opacity: 1, scale: 1, duration: 2.5, ease: "expo.out" }, "-=1.8")
+              .to(".hero-meta", { opacity: 1, y: -40, duration: 1.8, ease: "power3.out" }, "-=1.5")
+              .to(".profile-label", { opacity: 1, y: -30, duration: 1.5, ease: "power3.out" }, "-=1.2")
+              .to(".floating-nav", { autoAlpha: 1, y: 0, duration: 1.8, ease: "expo.out" }, "-=2.2")
+              .add(() => lenis.start(), "-=1");
+
+            // Scroll Parallax
+            gsap.to(".hero-title", {
+                yPercent: 50,
+                scrollTrigger: { trigger: "#hero", start: "top top", end: "bottom top", scrub: true }
+            });
+
+            const splitAbout = new SplitType('.reveal-text', { types: 'chars' });
+            gsap.to(splitAbout.chars, {
+                opacity: 1, filter: "blur(0px)", stagger: 0.02,
+                scrollTrigger: { trigger: "#about", start: "top 90%", end: "top 30%", scrub: true }
+            });
+
+            gsap.from(".bento-item", {
+                y: 150, opacity: 0, duration: 2, stagger: 0.2, ease: "power4.out",
+                scrollTrigger: { trigger: ".bento-grid", start: "top 95%" }
+            });
+
+            // Horizontal Pin
+            const horiz = document.querySelector('.horizontal-container');
+            gsap.to(horiz, {
+                x: () => -(horiz.scrollWidth - window.innerWidth),
+                ease: "none",
+                scrollTrigger: {
+                    trigger: "#works-pin", start: "top top", end: () => "+=" + horiz.scrollWidth,
+                    scrub: 1.2, pin: true, invalidateOnRefresh: true
+                }
+            });
+
+            gsap.to("#vision-parallax", {
+                scale: 1.5, yPercent: 20,
+                scrollTrigger: { trigger: "#vision-parallax", start: "top bottom", end: "bottom top", scrub: true }
+            });
+
+            gsap.from(".vision-text", {
+                y: 200, opacity: 0, duration: 2.5, ease: "expo.out",
+                scrollTrigger: { trigger: ".vision-content", start: "top 90%" }
+            });
+
+            gsap.from(".contact-title", {
+                yPercent: 140, duration: 2, ease: "expo.out",
+                scrollTrigger: { trigger: "#contact", start: "top 80%" }
+            });
+        };
+
+        window.onload = () => {
+            initThree();
+            initAnimations();
+            
+            lenis.on('scroll', (e) => {
+                const prog = (e.animatedScroll / (document.body.scrollHeight - window.innerHeight)) * 100;
+                gsap.to("#scroll-progress", { width: `${prog}%`, duration: 0.1 });
+            });
+        };
+    </script>
+</body>
+</html>
